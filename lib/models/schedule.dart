@@ -31,6 +31,9 @@ class Schedule extends HiveObject {
   @HiveField(8)
   String mode; // 'silence' | 'allow_priority' | 'allow_all'
 
+  @HiveField(9)
+  List<String> allowedApps; // packages autorisés (vide = toutes les apps)
+
   Schedule({
     required this.id,
     required this.label,
@@ -41,7 +44,8 @@ class Schedule extends HiveObject {
     required this.endMinute,
     this.active = true,
     this.mode = 'allow_priority',
-  });
+    List<String>? allowedApps,
+  }) : allowedApps = allowedApps ?? [];
 
   bool isActiveNow() {
     final now = DateTime.now();

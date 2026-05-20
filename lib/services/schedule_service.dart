@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 import '../models/schedule.dart';
 import 'dnd_service.dart';
+import 'app_service.dart';
 
 const taskName = 'checkSchedule';
 
@@ -15,10 +16,14 @@ void callbackDispatcher() {
     final activeSchedules = box.values.where((s) => s.active && s.isActiveNow()).toList();
 
     if (activeSchedules.isNotEmpty) {
-      final mode = DndService.modeFromString(activeSchedules.first.mode);
+      final schedule = activeSchedules.first;
+      final mode = DndService.modeFromString(schedule.mode);
       await DndService.setDndMode(mode);
+      await AppService.updateAllowedApps(schedule.allowedApps);
+      await AppService.setNotificationFilterActive(true);
     } else {
-      await DndService.setDndMode(0); // Retour mode normal
+      await DndService.setDndMode(0);
+      await AppService.setNotificationFilterActive(false);
     }
 
     return Future.value(true);

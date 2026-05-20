@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../models/schedule.dart';
 import '../services/schedule_service.dart';
 import '../services/dnd_service.dart';
+import '../services/app_service.dart';
+import 'app_picker_screen.dart';
 
 class ScheduleFormScreen extends StatefulWidget {
   final String? scheduleId;
@@ -19,6 +21,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
   TimeOfDay _endTime = const TimeOfDay(hour: 5, minute: 0);
   String _mode = 'allow_priority';
   bool _active = true;
+  List<String> _allowedApps = [];
 
   static const _dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   static const _modes = ['allow_priority', 'silence', 'allow_all'];
@@ -35,6 +38,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
         _endTime = TimeOfDay(hour: s.endHour, minute: s.endMinute);
         _mode = s.mode;
         _active = s.active;
+        _allowedApps = List.from(s.allowedApps);
       }
     }
   }
@@ -82,6 +86,7 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
       endMinute: _endTime.minute,
       mode: _mode,
       active: _active,
+      allowedApps: _allowedApps,
     );
     await ScheduleService.save(schedule);
     if (mounted) context.pop();
@@ -184,6 +189,54 @@ class _ScheduleFormScreenState extends State<ScheduleFormScreen> {
                 activeColor: const Color(0xFF2dd4bf),
                 contentPadding: EdgeInsets.zero,
               )).toList(),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Apps autorisées (filtrage par app via NotificationListenerService)
+          _Section(
+            title: 'Apps autorisées',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _allowedApps.isEmpty
+                      ? 'Toutes les apps (aucun filtre)'
+                      : '${_allowedApps.length} app(s) sélectionnée(s)',
+                  style: const TextStyle(color: Colors.white60, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Nécessite la permission "Accès aux notifications"',
+                  style: TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.push<List<String>>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AppPickerScreen(selectedPackages: _allowedApps),
+                      ),
+                    );
+                    if (result != null) setState(() => _allowedApps = result);
+                  },
+                  icon: const Icon(Icons.apps, color: Color(0xFF2dd4bf), size: 18),
+                  label: const Text('Choisir les apps', style: TextStyle(color: Color(0xFF2dd4bf))),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF2dd4bf)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                ),
+                if (_allowedApps.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => setState(() => _allowedApps = []),
+                    child: const Text('Tout réinitialiser', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  ),
+                ],
+              ],
             ),
           ),
 

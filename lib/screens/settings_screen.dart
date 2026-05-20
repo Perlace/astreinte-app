@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/dnd_service.dart';
+import '../services/app_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -12,16 +13,18 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _hasPermission = false;
+  bool _hasNotifListenerPermission = false;
 
   @override
   void initState() {
     super.initState();
-    _checkPermission();
+    _checkPermissions();
   }
 
-  Future<void> _checkPermission() async {
+  Future<void> _checkPermissions() async {
     final p = await DndService.hasPermission();
-    if (mounted) setState(() => _hasPermission = p);
+    final n = await AppService.hasNotificationListenerPermission();
+    if (mounted) setState(() { _hasPermission = p; _hasNotifListenerPermission = n; });
   }
 
   @override
@@ -49,7 +52,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onPressed: () async {
                         await DndService.requestPermission();
                         await Future.delayed(const Duration(seconds: 1));
-                        _checkPermission();
+                        _checkPermissions();
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0d9488)),
+                      child: const Text('Autoriser'),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            _SettingsTile(
+              icon: Icons.notifications_active,
+              title: 'Accès aux notifications',
+              subtitle: _hasNotifListenerPermission
+                  ? 'Accordé ✓ — filtrage par app actif'
+                  : 'Non accordé — nécessaire pour filtrer par app',
+              trailing: _hasNotifListenerPermission
+                  ? const Icon(Icons.check_circle, color: Color(0xFF2dd4bf))
+                  : ElevatedButton(
+                      onPressed: () async {
+                        await AppService.requestNotificationListenerPermission();
+                        await Future.delayed(const Duration(seconds: 1));
+                        _checkPermissions();
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0d9488)),
                       child: const Text('Autoriser'),
@@ -88,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingsTile(
             icon: Icons.info_outline,
             title: 'AstreinteApp',
-            subtitle: 'v1.0.0 — o2switch internal tool',
+            subtitle: 'v1.1.0 — o2switch internal tool',
           ),
         ],
       ),
