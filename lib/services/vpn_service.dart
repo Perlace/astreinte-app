@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class VpnService {
-  static const String baseUrl = 'http://utqd1640.pvc.o2switch.net:5000';
+  static const String baseUrl = 'http://pvc.o2switch.net:5000';
 
   static Future<Map<String, dynamic>> generateVPN(String code) async {
     final response = await http.post(
