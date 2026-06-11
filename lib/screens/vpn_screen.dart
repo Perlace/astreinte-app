@@ -104,13 +104,11 @@ class _VpnScreenState extends State<VpnScreen> {
               controller: _codeController,
               obscureText: true,
               keyboardType: TextInputType.number,
-              maxLength: 6,
               autofocus: true,
               style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 20),
               textAlign: TextAlign.center,
               onSubmitted: (_) => _checkCode(),
               decoration: InputDecoration(
-                counterText: '',
                 errorText: _codeError ? 'Code incorrect' : null,
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
