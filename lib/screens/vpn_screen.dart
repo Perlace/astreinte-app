@@ -1,17 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:wireguard_flutter/wireguard_flutter.dart';
-
-const _wgConfig = '''[Interface]
-PrivateKey = 2DqS6t2IVLSE4155QG2Gbmnv7uw49F7IPJm2qNl4eko=
-Address = 10.0.0.2/24
-DNS = 8.8.8.8
-
-[Peer]
-PublicKey = +iB4pASiK+m8kQXPMxevKObTesE/Ya4ENpEbTtaALlg=
-Endpoint = 51.159.165.27:51820
-AllowedIPs = 51.159.165.27/32
-PersistentKeepalive = 25
-''';
+import '../config/vpn_config.dart';
 
 class VpnScreen extends StatefulWidget {
   const VpnScreen({super.key});
@@ -21,21 +14,43 @@ class VpnScreen extends StatefulWidget {
 }
 
 class _VpnScreenState extends State<VpnScreen> {
+  bool _unlocked = false;
+  final _codeController = TextEditingController();
+  bool _codeError = false;
+
   VpnStage _stage = VpnStage.disconnected;
   bool _initializing = true;
 
   @override
   void initState() {
     super.initState();
-    _init();
+    _initWg();
   }
 
-  Future<void> _init() async {
+  Future<void> _initWg() async {
     await WireGuardFlutter.instance.initialize(interfaceName: 'wg0');
     WireGuardFlutter.instance.vpnStageSnapshot.listen((stage) {
       if (mounted) setState(() => _stage = stage);
     });
     setState(() => _initializing = false);
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  void _checkCode() {
+    if (_codeController.text.trim() == vpnAccessCode) {
+      setState(() {
+        _unlocked = true;
+        _codeError = false;
+      });
+    } else {
+      setState(() => _codeError = true);
+      _codeController.clear();
+    }
   }
 
   Future<void> _toggle() async {
@@ -44,95 +59,202 @@ class _VpnScreenState extends State<VpnScreen> {
     } else {
       await WireGuardFlutter.instance.startVpn(
         serverAddress: '51.159.165.27',
-        wgQuickConfig: _wgConfig,
+        wgQuickConfig: wgConfigAndroid,
         providerBundleIdentifier: 'com.o2switch.astreinte_app',
       );
     }
   }
 
+  Future<void> _exportWindows() async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/llm-mcflex-windows.conf');
+    await file.writeAsString(wgConfigWindows);
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'text/plain')],
+      subject: 'Config WireGuard Windows - llm.mcflex.fr',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final connected = _stage == VpnStage.connected;
-    final connecting = _stage == VpnStage.connecting || _stage == VpnStage.authenticating;
+    if (!_unlocked) return _buildLock();
+    return _buildVpn();
+  }
 
+  Widget _buildLock() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: connected
-                    ? const Color(0xFF0D2E1A)
-                    : const Color(0xFF0F2035),
-                border: Border.all(
-                  color: connected ? const Color(0xFF2dd4bf) : const Color(0xFF1e3a52),
-                  width: 2.5,
-                ),
-                boxShadow: connected
-                    ? [BoxShadow(color: const Color(0xFF2dd4bf).withOpacity(0.3), blurRadius: 30, spreadRadius: 5)]
-                    : [],
-              ),
-              child: Icon(
-                Icons.vpn_lock,
-                size: 64,
-                color: connected ? const Color(0xFF2dd4bf) : Colors.white24,
-              ),
+            const Icon(Icons.lock, size: 64, color: Color(0xFF2dd4bf)),
+            const SizedBox(height: 24),
+            const Text(
+              'Accès VPN',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Entrez le code pour continuer',
+              style: TextStyle(color: Colors.white54, fontSize: 14),
             ),
             const SizedBox(height: 32),
-            Text(
-              connected
-                  ? 'VPN Connecté'
-                  : connecting
-                      ? 'Connexion...'
-                      : 'VPN Déconnecté',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: connected ? const Color(0xFF2dd4bf) : Colors.white54,
-                letterSpacing: 0.5,
+            TextField(
+              controller: _codeController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              autofocus: true,
+              style: const TextStyle(color: Colors.white, letterSpacing: 4, fontSize: 20),
+              textAlign: TextAlign.center,
+              onSubmitted: (_) => _checkCode(),
+              decoration: InputDecoration(
+                counterText: '',
+                errorText: _codeError ? 'Code incorrect' : null,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF1e3a52)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF2dd4bf)),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.redAccent),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.redAccent),
+                ),
+                filled: true,
+                fillColor: const Color(0xFF0F2035),
               ),
             ),
-            if (connected) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'IP sortante : 51.159.165.27',
-                style: TextStyle(color: Colors.white38, fontSize: 13, fontFamily: 'monospace'),
-              ),
-            ],
-            const SizedBox(height: 40),
+            const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 50,
               child: ElevatedButton(
-                onPressed: (_initializing || connecting) ? null : _toggle,
+                onPressed: _checkCode,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: connected ? const Color(0xFF2d1515) : const Color(0xFF0B3D5C),
-                  foregroundColor: connected ? Colors.redAccent : const Color(0xFF2dd4bf),
-                  side: BorderSide(
-                    color: connected ? Colors.redAccent : const Color(0xFF2dd4bf),
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  backgroundColor: const Color(0xFF0B3D5C),
+                  foregroundColor: const Color(0xFF2dd4bf),
+                  side: const BorderSide(color: Color(0xFF2dd4bf)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: connecting
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2dd4bf)),
-                      )
-                    : Text(
-                        connected ? 'Déconnecter' : 'Connecter',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
+                child: const Text('Accéder', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildVpn() {
+    final connected = _stage == VpnStage.connected;
+    final connecting = _stage == VpnStage.connecting || _stage == VpnStage.authenticating;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: connected ? const Color(0xFF0D2E1A) : const Color(0xFF0F2035),
+              border: Border.all(
+                color: connected ? const Color(0xFF2dd4bf) : const Color(0xFF1e3a52),
+                width: 2.5,
+              ),
+              boxShadow: connected
+                  ? [BoxShadow(color: const Color(0xFF2dd4bf).withOpacity(0.3), blurRadius: 30, spreadRadius: 5)]
+                  : [],
+            ),
+            child: Icon(
+              Icons.vpn_lock,
+              size: 64,
+              color: connected ? const Color(0xFF2dd4bf) : Colors.white24,
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            connected ? 'VPN Connecté' : connecting ? 'Connexion...' : 'VPN Déconnecté',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: connected ? const Color(0xFF2dd4bf) : Colors.white54,
+            ),
+          ),
+          if (connected) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'IP sortante : 51.159.165.27',
+              style: TextStyle(color: Colors.white38, fontSize: 13, fontFamily: 'monospace'),
+            ),
+          ],
+          const SizedBox(height: 40),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: (_initializing || connecting) ? null : _toggle,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: connected ? const Color(0xFF2d1515) : const Color(0xFF0B3D5C),
+                foregroundColor: connected ? Colors.redAccent : const Color(0xFF2dd4bf),
+                side: BorderSide(color: connected ? Colors.redAccent : const Color(0xFF2dd4bf)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: connecting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2dd4bf)),
+                    )
+                  : Text(
+                      connected ? 'Déconnecter' : 'Connecter',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 40),
+          const Divider(color: Color(0xFF1e3a52)),
+          const SizedBox(height: 24),
+          Row(
+            children: const [
+              Icon(Icons.computer, color: Colors.white38, size: 18),
+              SizedBox(width: 8),
+              Text('Accès depuis Windows', style: TextStyle(color: Colors.white54, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: _exportWindows,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white70,
+                side: const BorderSide(color: Color(0xFF1e3a52)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.download, size: 20),
+              label: const Text('Exporter config Windows (.conf)'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Importer dans WireGuard Windows pour accéder à llm.mcflex.fr',
+            style: TextStyle(color: Colors.white24, fontSize: 11),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
