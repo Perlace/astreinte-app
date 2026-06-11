@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:wireguard_flutter/wireguard_flutter.dart';
 import '../config/vpn_config.dart';
 
+
 class VpnScreen extends StatefulWidget {
   const VpnScreen({super.key});
 
@@ -65,13 +66,13 @@ class _VpnScreenState extends State<VpnScreen> {
     }
   }
 
-  Future<void> _exportWindows() async {
+  Future<void> _exportConfig(String config, String filename, String subject) async {
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/llm-mcflex-windows.conf');
-    await file.writeAsString(wgConfigWindows);
+    final file = File('${dir.path}/$filename');
+    await file.writeAsString(config);
     await Share.shareXFiles(
       [XFile(file.path, mimeType: 'text/plain')],
-      subject: 'Config WireGuard Windows - llm.mcflex.fr',
+      subject: subject,
     );
   }
 
@@ -236,19 +237,34 @@ class _VpnScreenState extends State<VpnScreen> {
             width: double.infinity,
             height: 50,
             child: OutlinedButton.icon(
-              onPressed: _exportWindows,
+              onPressed: () => _exportConfig(wgConfigWindows, 'llm-mcflex-windows.conf', 'Config WireGuard Windows'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white70,
                 side: const BorderSide(color: Color(0xFF1e3a52)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              icon: const Icon(Icons.download, size: 20),
+              icon: const Icon(Icons.computer, size: 20),
               label: const Text('Exporter config Windows (.conf)'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: () => _exportConfig(wgConfigLinux, 'llm-mcflex-linux.conf', 'Config WireGuard Linux'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white70,
+                side: const BorderSide(color: Color(0xFF1e3a52)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.terminal, size: 20),
+              label: const Text('Exporter config Linux (.conf)'),
             ),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Importer dans WireGuard Windows pour accéder à llm.mcflex.fr',
+            'Importer dans WireGuard pour accéder à llm.mcflex.fr',
             style: TextStyle(color: Colors.white24, fontSize: 11),
             textAlign: TextAlign.center,
           ),

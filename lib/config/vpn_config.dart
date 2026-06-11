@@ -27,3 +27,15 @@ Endpoint = $_serverEndpoint
 AllowedIPs = 51.159.165.27/32
 PersistentKeepalive = 25
 ''';
+
+const String wgConfigLinux = '''[Interface]
+PrivateKey = 6CTee3Ji2vvMW+1zNH+iQvVWAlKxSQoJGwmFuX1aLGY=
+Address = 10.0.0.4/24
+DNS = 8.8.8.8
+
+[Peer]
+PublicKey = $_serverPub
+Endpoint = $_serverEndpoint
+AllowedIPs = 51.159.165.27/32
+PersistentKeepalive = 25
+''';
