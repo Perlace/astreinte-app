@@ -1,5 +1,5 @@
 // Modifier VPN_ACCESS_CODE pour changer le code d'accès à l'onglet VPN
-const String vpnAccessCode = '636669';
+const String vpnAccessCode = '0253178';
 
 const String _serverPub = '+iB4pASiK+m8kQXPMxevKObTesE/Ya4ENpEbTtaALlg=';
 const String _serverEndpoint = '51.159.165.27:51820';
