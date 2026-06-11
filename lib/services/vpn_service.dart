@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class VpnService {
-  static const String baseUrl = 'http://choix.creebs.fr/vpn-api';
+  static const String baseUrl = 'https://easy.creebs.fr/vpn-api.php';
 
   static Future<Map<String, dynamic>> generateVPN(String code) async {
     final response = await http.post(
