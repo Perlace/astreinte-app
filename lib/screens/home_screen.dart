@@ -52,16 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A1628),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0B3D5C),
-        title: const Text('🔔 AstreinteApp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white70),
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
-      ),
       body: Column(
         children: [
           // Statut actuel

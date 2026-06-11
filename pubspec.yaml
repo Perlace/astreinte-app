@@ -28,6 +28,8 @@ dependencies:
   url_launcher: ^6.3.1
   # Date/heure
   intl: ^0.19.0
+  # HTTP pour API VPN
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
